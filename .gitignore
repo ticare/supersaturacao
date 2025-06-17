@@ -1,0 +1,49 @@
+# Ignora arquivos e diretórios gerados pelo Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+/build/
+
+# Arquivos e diretórios específicos do Android
+/android/.gradle/
+/android/app/build/
+/android/app/.gradle/
+*.iml
+
+# Arquivos e diretórios específicos do iOS
+/ios/.symlinks/
+/ios/.generated/
+/ios/Flutter/App.framework/
+/ios/Flutter/Flutter.framework/
+/ios/Flutter/Flutter.podspec
+/ios/Pods/ # Ignora a pasta Pods gerada pelo CocoaPods
+
+# Arquivos de IDE e Editor
+.idea/ # IntelliJ/Android Studio project files
+.vscode/launch.json # VS Code launch configuration
+*.swp # Vim swap files
+*~ # Editor backup files
+.DS_Store # macOS specific files
+
+# Arquivos de Log e Lock
+*.log
+pubspec.lock # Opcional: Inclua se quiser garantir as mesmas versões de dependência em todos os ambientes. Ignore se preferir flexibilidade.
+
+# Arquivos de Teste de Cobertura
+/coverage/
+
+# Arquivos de Análise Estática
+.analysis_options
+
+# Arquivos de Chave (se existirem e não estiverem em outro lugar)
+# CUIDADO: Nunca commite arquivos com chaves privadas ou informações sensíveis!
+# key.properties
+# *.jks
+# *.keystore
+
+# Arquivos temporários ou específicos do usuário
+# .env # Se você usar um arquivo .env para variáveis de ambiente
+# secrets.dart # Exemplo de arquivo com segredos
+

@@ -1,0 +1,233 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(SupersaturacaoApp());
+}
+
+class SupersaturacaoApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Coeficiente de Supersaturação',
+      theme: ThemeData(
+        primarySwatch: Colors.deepOrange,
+      ),
+      home: SplashScreen(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  @override
+  _SplashScreenState createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  bool _timeout = false;
+
+  @override
+Widget build(BuildContext context) {
+  if (_timeout) {
+    return SupersaturacaoHome();
+  }
+
+  return GestureDetector(
+    onTap: _navigateToHome,
+    child: Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.black, // caso a imagem não preencha, mantém as bordas pretas
+      child: Image.asset(
+        'assets/R-Ram.png',
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        alignment: Alignment.center,
+      ),
+    ),
+  );
+}
+
+  }
+
+  void _navigateToHome() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => SupersaturacaoHome()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _navigateToHome,
+      child: _timeout
+          ? SupersaturacaoHome()
+          : Scaffold(
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          child: Image.asset(
+            'assets/R-Ram.png',
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SupersaturacaoHome extends StatefulWidget {
+  @override
+  _SupersaturacaoHomeState createState() => _SupersaturacaoHomeState();
+}
+
+class _SupersaturacaoHomeState extends State<SupersaturacaoHome> {
+  double temperatura = 25.0;
+  double brix = 10.0;
+  double pureza = 90.0;
+
+  double calcularSupersaturacao(double temperatura, double brix, double pureza) {
+    // Lógica de cálculo do coeficiente de supersaturação
+    // Substitua esta função pela lógica real conforme necessário
+    return (brix * pureza) / (temperatura + 273.15);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double supersaturacao = calcularSupersaturacao(temperatura, brix, pureza);
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color(0xFFFF6020),
+        title: Text(
+          'RAM Automação e Controle',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 28.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      backgroundColor: Colors.black,
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Título adicional
+            Text(
+              'Coeficiente de Saturação',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28.0,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+
+            // Duas quebras de linha
+            SizedBox(height: 62),
+
+            Text(
+              'Temperatura: ${temperatura.toStringAsFixed(1)} °C',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: 26),
+            ),
+            Slider(
+              value: temperatura,
+              min: 0,
+              max: 100,
+              divisions: 100,
+              label: temperatura.toStringAsFixed(1),
+              activeColor: Color(0xFFFF6020),
+              onChanged: (double value) {
+                setState(() {
+                  temperatura = value;
+                });
+              },
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Brix: ${brix.toStringAsFixed(1)} °Brix',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: 26),
+            ),
+            Slider(
+              value: brix,
+              min: 0,
+              max: 100,
+              divisions: 100,
+              label: brix.toStringAsFixed(1),
+              activeColor: Color(0xFFFF6020),
+              onChanged: (double value) {
+                setState(() {
+                  brix = value;
+                });
+              },
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Pureza: ${pureza.toStringAsFixed(1)} %',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: 26),
+            ),
+            Slider(
+              value: pureza,
+              min: 0,
+              max: 100,
+              divisions: 100,
+              label: pureza.toStringAsFixed(1),
+              activeColor: Color(0xFFFF6020),
+              onChanged: (double value) {
+                setState(() {
+                  pureza = value;
+                });
+              },
+            ),
+
+            // Espaço entre os sliders e o valor de Supersaturação
+            SizedBox(height: 62),
+
+            Text(
+              'Supersaturação: ${supersaturacao.toStringAsFixed(3)}',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: 30,  fontWeight: FontWeight.bold,),
+            ),
+
+            // Espaço para empurrar o rodapé para o final da tela
+            Spacer(),
+
+            // Rodapé
+            Column(
+              children: [
+                Text(
+                  'ramsystem.com.br',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22.0,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.phone, color: Colors.white, size: 22),
+                    SizedBox(width: 4),
+                    Text(
+                      '+55 14 3604 8000',
+                      style: TextStyle(color: Colors.white, fontSize: 22.0),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
