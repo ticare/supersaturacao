@@ -1,321 +1,254 @@
 workflows:
-  ios-ipa-build:
-    name: Gerar IPA para Teste
+  ios-flutter-build:
+    name: Flutter iOS - Gerar IPA
     max_build_duration: 60
     instance_type: mac_mini_m1
     environment:
       vars:
-        # Ajuste estes valores conforme seu projeto
-        XCODE_PROJECT: "APP RAM Supersaturação" # Nome do seu projeto
-        BUNDLE_IDENTIFIER: "fabiano.oliveira@ticare.com.br" # Seu bundle ID
+        # Configurações do seu projeto
+        BUNDLE_IDENTIFIER: "fabiano.oliveira@ticare.com.br"
+        APP_NAME: "APP RAM Supersaturação"
+      flutter: stable
       xcode: latest
       cocoapods: default
-    scripts:
-      - name: Diagnóstico detalhado do projeto
-        script: |
-          echo "🔍 DIAGNÓSTICO DETALHADO DO PROJETO"
-          echo "=================================="
 
-          echo -e "\n1. 📁 Estrutura de arquivos:"
+    scripts:
+      - name: Diagnóstico do projeto Flutter
+        script: |
+          echo "🐦 DIAGNÓSTICO DO PROJETO FLUTTER"
+          echo "================================="
+
+          # Verificar se é projeto Flutter
+          if [ ! -f "pubspec.yaml" ]; then
+            echo "❌ Este não é um projeto Flutter! pubspec.yaml não encontrado."
+            exit 1
+          fi
+
+          echo "✅ Projeto Flutter confirmado"
+
+          echo -e "\n📁 Estrutura do projeto:"
           ls -la
 
-          echo -e "\n2. 📱 Projetos iOS encontrados:"
-          find . -name "*.xcodeproj" -type d
-          find . -name "*.xcworkspace" -type d
+          echo -e "\n📱 Verificando pasta ios:"
+          ls -la ios/ 2>/dev/null || echo "❌ Pasta ios não encontrada"
 
-          echo -e "\n3. 📋 Arquivos de configuração:"
-          find . -name "Podfile" -type f && echo "✅ Podfile encontrado" || echo "❌ Podfile não encontrado"
-          find . -name "*.podspec" -type f && echo "✅ Podspec encontrado" || echo "❌ Podspec não encontrado"
-          find . -name "Package.swift" -type f && echo "✅ Package.swift encontrado" || echo "❌ Package.swift não encontrado"
+          echo -e "\n📋 Conteúdo do pubspec.yaml:"
+          cat pubspec.yaml | head -20
 
-          PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-          WORKSPACE_FILE=$(find . -name "*.xcworkspace" -type d | head -n 1)
+          echo -e "\n🔍 Verificando configurações iOS:"
+          ls -la ios/Runner/ 2>/dev/null || echo "❌ Pasta ios/Runner não encontrada"
 
-          if [ -n "$WORKSPACE_FILE" ]; then
-            echo -e "\n4. 🏗️  Analisando workspace: $WORKSPACE_FILE"
-            xcodebuild -list -workspace "$WORKSPACE_FILE" || echo "❌ Erro ao listar workspace"
-          elif [ -n "$PROJECT_FILE" ]; then
-            echo -e "\n4. 🏗️  Analisando projeto: $PROJECT_FILE"
-            xcodebuild -list -project "$PROJECT_FILE" || echo "❌ Erro ao listar projeto"
+          # Verificar se existe o projeto Xcode
+          if [ -f "ios/Runner.xcodeproj/project.pbxproj" ]; then
+            echo "✅ Projeto Xcode encontrado"
           else
-            echo -e "\n❌ Nenhum projeto iOS encontrado!"
-            exit 1
+            echo "❌ Projeto Xcode não encontrado"
           fi
 
-          echo -e "\n5. 📋 Verificando Info.plist:"
-          find . -name "Info.plist" -type f | head -5
-
-          echo -e "\n6. 🔍 Verificando schemes compartilhados:"
-          if [ -n "$PROJECT_FILE" ]; then
-            ls -la "$PROJECT_FILE/xcshareddata/xcschemes/" 2>/dev/null || echo "❌ Nenhum scheme compartilhado"
-          fi
-          if [ -n "$WORKSPACE_FILE" ]; then
-            ls -la "$WORKSPACE_FILE/xcshareddata/xcschemes/" 2>/dev/null || echo "❌ Nenhum scheme compartilhado no workspace"
-          fi
-
-          echo -e "\n=================================="
-
-      - name: Analisar targets e schemes disponíveis
+      - name: Limpar e configurar Flutter
         script: |
-          echo "=== Analisando projeto ==="
-          PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-          WORKSPACE_FILE=$(find . -name "*.xcworkspace" -type d | head -n 1)
+          echo "🧹 Limpando projeto Flutter..."
 
-          if [ -n "$WORKSPACE_FILE" ]; then
-            echo "Workspace encontrado: $WORKSPACE_FILE"
-            xcodebuild -list -workspace "$WORKSPACE_FILE"
-          elif [ -n "$PROJECT_FILE" ]; then
-            echo "Projeto encontrado: $PROJECT_FILE"
-            xcodebuild -list -project "$PROJECT_FILE"
-          else
-            echo "❌ Nenhum projeto .xcodeproj ou .xcworkspace encontrado!"
-            exit 1
-          fi
+          # Limpar Flutter
+          flutter clean
 
-      - name: Instalar dependências (se houver CocoaPods)
-        script: |
-          if [ -f "Podfile" ]; then
-            echo "📦 Instalando CocoaPods..."
-            pod install
-          else
-            echo "✅ Nenhum Podfile encontrado, pulando CocoaPods"
-          fi
+          # Verificar instalação do Flutter
+          echo "🔍 Verificando Flutter:"
+          flutter --version
+          flutter doctor -v
 
-      - name: Resolver problemas comuns de build
-        script: |
-          echo "🔧 Resolvendo problemas comuns..."
+          # Instalar dependências
+          echo "📦 Instalando dependências Flutter..."
+          flutter pub get
 
-          PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-          WORKSPACE_FILE=$(find . -name "*.xcworkspace" -type d | head -n 1)
-
-          # Limpar builds anteriores
-          echo "🧹 Limpando builds anteriores..."
-          rm -rf build/
-          rm -rf DerivedData/
-
-          # Se for Flutter, configurar adequadamente
-          if [ -f "pubspec.yaml" ]; then
-            echo "🐦 Projeto Flutter detectado!"
-            echo "Configurando Flutter..."
-            
-            # Instalar dependências Flutter
-            flutter pub get
-            
-            # Configurar para iOS
-            cd ios
-            pod install --repo-update
-            cd ..
-            
-            # Build Flutter
-            flutter build ios --release --no-codesign
-            
-            echo "✅ Build Flutter concluído"
-          fi
-
-          # Verificar e corrigir configurações comuns
-          if [ -n "$PROJECT_FILE" ] || [ -n "$WORKSPACE_FILE" ]; then
-            echo "🔧 Verificando configurações do projeto..."
-            
-            # Procurar por arquivos pbxproj
-            PBXPROJ_FILE=$(find . -name "project.pbxproj" | head -n 1)
-            
-            if [ -n "$PBXPROJ_FILE" ]; then
-              echo "📝 Verificando configurações no project.pbxproj..."
-              
-              # Verificar se há configurações problemáticas
-              grep -q "ENABLE_BITCODE" "$PBXPROJ_FILE" && echo "⚠️  ENABLE_BITCODE encontrado" || echo "✅ ENABLE_BITCODE OK"
-              grep -q "SWIFT_VERSION" "$PBXPROJ_FILE" && echo "✅ Swift version configurado" || echo "⚠️  Swift version não encontrado"
-            fi
-          fi
-
-      - name: Configurar assinatura de código (desenvolvimento)
-        script: |
-          echo "🔑 Configurando assinatura para desenvolvimento..."
-
-          PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-          WORKSPACE_FILE=$(find . -name "*.xcworkspace" -type d | head -n 1)
-
-          if [ -n "$WORKSPACE_FILE" ]; then
-            FIRST_TARGET=$(xcodebuild -list -workspace "$WORKSPACE_FILE" | grep -A 1000 "Targets:" | grep -v "Targets:" | grep -v "Build Configurations:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-          elif [ -n "$PROJECT_FILE" ]; then
-            FIRST_TARGET=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Targets:" | grep -v "Targets:" | grep -v "Build Configurations:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-          fi
-
-          echo "🎯 Target principal: $FIRST_TARGET"
-
-      - name: Build do arquivo IPA
-        script: |
-          echo "🚀 Iniciando build do IPA..."
-
-          PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-          WORKSPACE_FILE=$(find . -name "*.xcworkspace" -type d | head -n 1)
-
-          # Determinar se usar workspace ou project
-          if [ -n "$WORKSPACE_FILE" ]; then
-            echo "📦 Usando workspace: $WORKSPACE_FILE"
-            PROJECT_ARG="-workspace $WORKSPACE_FILE"
-          else
-            echo "📁 Usando project: $PROJECT_FILE"
-            PROJECT_ARG="-project $PROJECT_FILE"
-          fi
-
-          # Listar todos os schemes disponíveis
-          echo "📋 Schemes disponíveis:"
-          if [ -n "$WORKSPACE_FILE" ]; then
-            xcodebuild -list -workspace "$WORKSPACE_FILE"
-          else
-            xcodebuild -list -project "$PROJECT_FILE"
-          fi
-
-          # Pegar o primeiro scheme disponível
-          if [ -n "$WORKSPACE_FILE" ]; then
-            FIRST_SCHEME=$(xcodebuild -list -workspace "$WORKSPACE_FILE" | grep -A 1000 "Schemes:" | grep -v "Schemes:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-          else
-            FIRST_SCHEME=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Schemes:" | grep -v "Schemes:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-          fi
-
-          echo "🎯 Scheme selecionado: $FIRST_SCHEME"
-
-          # Build mais simples primeiro (sem archive)
-          echo "🔨 Fazendo build simples primeiro..."
-          xcodebuild \
-            $PROJECT_ARG \
-            -scheme "$FIRST_SCHEME" \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE="" \
-            clean build
-
-          # Se o build simples funcionou, tentar o archive
+          # Verificar se pub get funcionou
           if [ $? -eq 0 ]; then
-            echo "✅ Build simples OK, tentando archive..."
-            xcodebuild archive \
-              $PROJECT_ARG \
-              -scheme "$FIRST_SCHEME" \
-              -configuration Release \
-              -archivePath "$PWD/build/$FIRST_SCHEME.xcarchive" \
-              -sdk iphoneos \
-              -destination 'generic/platform=iOS' \
-              ONLY_ACTIVE_ARCH=NO \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO \
-              CODE_SIGN_IDENTITY="" \
-              PROVISIONING_PROFILE=""
+            echo "✅ Dependências Flutter instaladas"
           else
-            echo "❌ Build simples falhou, tentando sem clean..."
-            xcodebuild \
-              $PROJECT_ARG \
-              -scheme "$FIRST_SCHEME" \
-              -configuration Release \
-              -sdk iphoneos \
-              -destination 'generic/platform=iOS' \
-              ONLY_ACTIVE_ARCH=NO \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO \
-              CODE_SIGN_IDENTITY="" \
-              PROVISIONING_PROFILE="" \
-              build
+            echo "❌ Erro ao instalar dependências Flutter"
+            exit 1
+          fi
+
+      - name: Configurar projeto iOS
+        script: |
+          echo "🍎 Configurando projeto iOS..."
+
+          cd ios
+
+          # Verificar se existe Podfile
+          if [ ! -f "Podfile" ]; then
+            echo "❌ Podfile não encontrado!"
+            echo "Gerando Podfile básico..."
+            cd ..
+            flutter build ios --config-only
+            cd ios
+          fi
+
+          echo "📦 Instalando CocoaPods..."
+          pod deintegrate 2>/dev/null || echo "Nenhuma integração anterior para remover"
+          pod install --repo-update
+
+          if [ $? -eq 0 ]; then
+            echo "✅ CocoaPods instalado com sucesso"
+          else
+            echo "❌ Erro ao instalar CocoaPods"
+            exit 1
+          fi
+
+          cd ..
+
+          # Gerar arquivos de configuração iOS
+          echo "⚙️ Gerando configurações iOS..."
+          flutter build ios --config-only --release
+
+          # Verificar se Generated.xcconfig foi criado
+          if [ -f "ios/Flutter/Generated.xcconfig" ]; then
+            echo "✅ Generated.xcconfig criado com sucesso"
+            echo "📋 Conteúdo do Generated.xcconfig:"
+            cat ios/Flutter/Generated.xcconfig
+          else
+            echo "❌ Generated.xcconfig não foi criado!"
+            echo "Tentando criar manualmente..."
+            mkdir -p ios/Flutter
+            echo "FLUTTER_ROOT=/Users/builder/programs/flutter" > ios/Flutter/Generated.xcconfig
+            echo "FLUTTER_APPLICATION_PATH=/Users/builder/clone" >> ios/Flutter/Generated.xcconfig
+            echo "COCOAPODS_PARALLEL_CODE_SIGN=true" >> ios/Flutter/Generated.xcconfig
+          fi
+
+      - name: Configurar Bundle ID e assinatura
+        script: |
+          echo "🔑 Configurando Bundle ID e assinatura..."
+
+          # Configurar Bundle ID usando Flutter
+          if [ -n "$BUNDLE_IDENTIFIER" ]; then
+            echo "📱 Configurando Bundle ID: $BUNDLE_IDENTIFIER"
+            
+            # Verificar se o arquivo Info.plist existe
+            if [ -f "ios/Runner/Info.plist" ]; then
+              echo "✅ Info.plist encontrado"
+            else
+              echo "❌ Info.plist não encontrado"
+            fi
+            
+            # Listar schemes disponíveis
+            echo "📋 Schemes disponíveis:"
+            xcodebuild -list -workspace ios/Runner.xcworkspace 2>/dev/null || xcodebuild -list -project ios/Runner.xcodeproj
+          fi
+
+      - name: Build Flutter iOS
+        script: |
+          echo "🚀 Fazendo build do Flutter para iOS..."
+
+          # Build Flutter para iOS sem codesign
+          flutter build ios \
+            --release \
+            --no-codesign \
+            --target-platform ios \
+            --dart-define=flutter.inspector.structuredErrors=false
+
+          if [ $? -eq 0 ]; then
+            echo "✅ Build Flutter iOS concluído com sucesso"
+          else
+            echo "❌ Erro no build Flutter iOS"
+            
+            echo "🔍 Verificando logs de erro..."
+            # Tentar build mais verboso
+            flutter build ios --release --no-codesign --verbose
+            exit 1
+          fi
+
+          # Verificar se o .app foi gerado
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          if [ -d "$APP_PATH" ]; then
+            echo "✅ Arquivo .app gerado: $APP_PATH"
+            ls -la "$APP_PATH"
+          else
+            echo "❌ Arquivo .app não encontrado em $APP_PATH"
+            echo "🔍 Procurando arquivo .app..."
+            find build -name "*.app" -type d 2>/dev/null || echo "Nenhum .app encontrado"
           fi
 
       - name: Gerar arquivo IPA
         script: |
           echo "📱 Gerando arquivo IPA..."
 
-          # Procurar pelo arquivo .app em vários locais possíveis
-          APP_FILE=""
-
-          # Locais possíveis do arquivo .app
-          SEARCH_PATHS=(
-            "build"
-            "build/Release-iphoneos"
-            "build/*.xcarchive/Products/Applications"
-            "$HOME/Library/Developer/Xcode/DerivedData/*/Build/Products/Release-iphoneos"
-            "."
-          )
-
-          for path in "${SEARCH_PATHS[@]}"; do
-            echo "🔍 Procurando em: $path"
-            FOUND_APP=$(find $path -name "*.app" -type d 2>/dev/null | head -n 1)
-            if [ -n "$FOUND_APP" ]; then
-              APP_FILE="$FOUND_APP"
-              echo "✅ App encontrado: $APP_FILE"
-              break
-            fi
-          done
+          # Localizar o arquivo .app
+          APP_FILE=$(find build -name "*.app" -type d | head -n 1)
 
           if [ -z "$APP_FILE" ]; then
             echo "❌ Arquivo .app não encontrado!"
-            echo "📁 Estrutura de diretórios:"
-            find . -name "*.app" -type d 2>/dev/null || echo "Nenhum arquivo .app encontrado em lugar algum"
-            
-            echo -e "\n📁 Conteúdo do diretório build:"
-            ls -la build/ 2>/dev/null || echo "Diretório build não existe"
-            
-            echo -e "\n📁 Todos os arquivos gerados:"
-            find . -type f -name "*" | grep -E '\.(app|ipa|xcarchive)' || echo "Nenhum arquivo relevante encontrado"
-            
+            echo "📁 Conteúdo do diretório build:"
+            find build -type d -name "*.app" 2>/dev/null || echo "Nenhum diretório .app encontrado"
+            find build -type f -name "Runner" 2>/dev/null || echo "Nenhum executável Runner encontrado"
             exit 1
           fi
 
-          # Verificar se o .app é válido
-          if [ ! -d "$APP_FILE" ]; then
-            echo "❌ $APP_FILE não é um diretório válido"
-            exit 1
-          fi
+          echo "✅ App encontrado: $APP_FILE"
 
+          # Verificar conteúdo do .app
           echo "📋 Conteúdo do app:"
           ls -la "$APP_FILE"
 
-          # Criar estrutura para IPA
+          # Verificar se o executável existe
+          APP_NAME=$(basename "$APP_FILE" .app)
+          if [ -f "$APP_FILE/$APP_NAME" ]; then
+            echo "✅ Executável encontrado: $APP_FILE/$APP_NAME"
+          else
+            echo "❌ Executável não encontrado em $APP_FILE/$APP_NAME"
+            echo "📋 Conteúdo detalhado:"
+            find "$APP_FILE" -type f
+          fi
+
+          # Criar estrutura Payload
+          echo "📦 Criando estrutura IPA..."
           rm -rf Payload
-          mkdir -p Payload
+          mkdir Payload
           cp -R "$APP_FILE" Payload/
 
-          # Verificar se copiou corretamente
-          echo "📋 Conteúdo do Payload:"
-          ls -la Payload/
-
-          # Criar arquivo IPA
-          echo "🗜️  Criando arquivo ZIP/IPA..."
-          zip -r app.ipa Payload/
-
-          if [ -f "app.ipa" ]; then
-            echo "🎉 IPA gerado com sucesso!"
-            ls -la app.ipa
+          # Verificar cópia
+          if [ -d "Payload/$(basename "$APP_FILE")" ]; then
+            echo "✅ App copiado para Payload"
           else
-            echo "❌ Falha ao criar arquivo IPA"
+            echo "❌ Erro ao copiar app para Payload"
             exit 1
           fi
 
-      - name: Verificar IPA gerado
-        script: |
-          if [ -f "app.ipa" ]; then
-            echo "✅ Arquivo IPA criado com sucesso!"
-            echo "📊 Tamanho do arquivo:"
-            ls -lh app.ipa
-            
-            echo -e "\n📋 Conteúdo do IPA:"
-            unzip -l app.ipa | head -20
+          # Criar IPA
+          echo "🗜️ Criando arquivo IPA..."
+          zip -r "app-ram-supersaturacao.ipa" Payload/
+
+          if [ -f "app-ram-supersaturacao.ipa" ]; then
+            echo "🎉 IPA gerado com sucesso!"
+            ls -lh "app-ram-supersaturacao.ipa"
           else
-            echo "❌ Falha na geração do IPA"
+            echo "❌ Falha ao criar IPA"
+            exit 1
+          fi
+
+      - name: Verificar IPA final
+        script: |
+          if [ -f "app-ram-supersaturacao.ipa" ]; then
+            echo "✅ Verificação final do IPA:"
+            echo "📊 Tamanho: $(ls -lh app-ram-supersaturacao.ipa | awk '{print $5}')"
+            echo "📋 Estrutura interna:"
+            unzip -l app-ram-supersaturacao.ipa | head -10
+            
+            # Verificar se o IPA contém o executável
+            unzip -l app-ram-supersaturacao.ipa | grep -E "(Runner|executable)" && echo "✅ Executável presente" || echo "⚠️ Executável pode estar ausente"
+          else
+            echo "❌ IPA não foi gerado"
             exit 1
           fi
 
     artifacts:
-      - app.ipa
-      - build/**/*.app
-      - build/**/*.xcarchive
-      - /tmp/xcodebuild_logs/*.log
+      - app-ram-supersaturacao.ipa
+      - build/ios/iphoneos/*.app/**
+      - ios/Flutter/Generated.xcconfig
 
     publishing:
       email:
         recipients:
-          - fabiano.oliveira@ticare.com.br # Substitua pelo seu email
+          - fabiano.oliveira@ticare.com.br
         notify:
           success: true
           failure: true
