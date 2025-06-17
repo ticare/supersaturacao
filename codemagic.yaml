@@ -169,7 +169,7 @@ Configure no Codemagic (Teams → Environment variables):
 APP_STORE_CONNECT_ISSUER_ID=seu_issuer_id
 APP_STORE_CONNECT_KEY_IDENTIFIER=seu_key_id
 APP_STORE_CONNECT_PRIVATE_KEY=conteudo_do_arquivo_p8
-BUNDLE_IDENTIFIER=com.seudominio.clone
+BUNDLE_IDENTIFIER=fabiano.oliveira@ticare.com.br
 
 6. Estrutura de Pastas Recomendada
 
@@ -494,7 +494,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - seuemail@exemplo.com  # Substitua pelo seu email
+          - fabiano.oliveira@ticare.com.br  # Substitua pelo seu email
         notify:
           success: true
           failure: true
