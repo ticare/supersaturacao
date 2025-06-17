@@ -6,8 +6,8 @@ workflows:
     environment:
       vars:
         # Ajuste estes valores conforme seu projeto
-        XCODE_PROJECT: "clone.xcodeproj"  # Nome do seu projeto
-        BUNDLE_IDENTIFIER: "com.exemplo.clone"  # Seu bundle ID
+        XCODE_PROJECT: "APP RAM Supersaturação"  # Nome do seu projeto
+        BUNDLE_IDENTIFIER: "fabiano.oliveira@ticare.com.br"  # Seu bundle ID
       xcode: latest
       cocoapods: default
     scripts:
@@ -417,7 +417,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - seuemail@exemplo.com  # Substitua pelo seu email
+          - fabiano.oliveira@ticare.com.br  # Substitua pelo seu email
         notify:
           success: true
           failure: true
