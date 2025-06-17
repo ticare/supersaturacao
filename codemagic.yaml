@@ -1,341 +1,3 @@
-usage: app-store-connect [-h] [--log-stream {stderr,stdout}] [--no-color] [--version] [-s] [-v] {app-store-version-localizations,app-store-version-phased-releases,app-store-version-submissions,app-store-versions,apps,beta-app-review-submissions,beta-build-localizations,beta-groups,builds,bundle-ids,certificates,devices,fetch-signing-files,get-latest-app-store-build-number,get-latest-build-number,get-latest-testflight-build-number,profiles,publish,review-submission-items,review-submissions} ...
-app-store-connect: error: argument --issuer-id: Missing value ISSUER_ID. Provide it with argument --issuer-id, or set environment variable APP_STORE_CONNECT_ISSUER_ID
-There are no Xcode project files in this directory.  agvtool needs a project to operate.
-
-You're encountering two different issues here:
-1. App Store Connect API Issue
-
-The app-store-connect command is missing the required --issuer-id parameter. You have a few options to fix this:
-
-Option A: Pass it as a command line argument:
-
-bash
-
-app-store-connect --issuer-id YOUR_ISSUER_ID [other commands]
-
-Option B: Set it as an environment variable:
-
-bash
-
-export APP_STORE_CONNECT_ISSUER_ID=YOUR_ISSUER_ID
-app-store-connect [other commands]
-
-To find your Issuer ID:
-
-    Go to App Store Connect
-    Navigate to Users and Access → Integrations → App Store Connect API
-    Your Issuer ID will be displayed there
-
-2. agvtool Issue
-
-The agvtool error indicates you're not in a directory containing an Xcode project. This tool requires:
-
-    An .xcodeproj file, or
-    An .xcworkspace file with associated project files
-
-To fix this:
-
-    Navigate to your iOS/macOS project directory:
-
-bash
-
-cd /path/to/your/project
-
-Verify you're in the right location:
-
-    bash
-
-    ls -la *.xcodeproj *.xcworkspace
-
-If you don't have an Xcode project yet, you'll need to create one first using Xcode or the command line tools.
-
-What specific task are you trying to accomplish with these tools? I can provide more targeted guidance based on your goal.
-
-Did not find any schemes for /Users/builder/clone.xcodeproj. Please specify scheme or target manually
-
-This error occurs when Xcode can't automatically detect a scheme in your project. Here are several ways to resolve this:
-1. List Available Schemes
-
-First, check what schemes are actually available:
-
-bash
-
-xcodebuild -list -project /Users/builder/clone.xcodeproj
-
-This will show you all available schemes and targets.
-2. Specify a Scheme Manually
-
-Once you know the available schemes, specify one explicitly:
-
-bash
-
-xcodebuild -project /Users/builder/clone.xcodeproj -scheme YourSchemeName
-
-3. Create a Scheme (if none exist)
-
-If no schemes exist, you can create one:
-
-Option A: Using Xcode GUI
-
-    Open the project in Xcode
-    Go to Product → Scheme → Manage Schemes
-    Click the "+" button to add a new scheme
-    Configure the scheme for your target
-
-Option B: Using command line
-
-bash
-
-xcodebuild -project /Users/builder/clone.xcodeproj -target YourTargetName -configuration Debug
-
-4. Alternative: Use Target Instead
-
-If schemes aren't working, try specifying a target directly:
-
-bash
-
-xcodebuild -project /Users/builder/clone.xcodeproj -target YourTargetName
-
-5. Check Project Structure
-
-Verify the project structure is intact:
-
-bash
-
-ls -la /Users/builder/clone.xcodeproj/
-
-Look for:
-
-    project.pbxproj file
-    xcshareddata or xcuserdata folders (which contain scheme info)
-
-Common Scenarios:
-
-    CI/CD Environment: Often schemes aren't shared. Make sure to mark schemes as "Shared" in Xcode
-    Cloned Repository: The original developer might not have committed scheme files
-    Corrupted Project: The .xcodeproj file might be damaged
-
-What command were you running that generated this error? That would help me provide more specific guidance.
-
-gostaria de usar o codemagic para  gerar este build como devo fazer
-
-Para usar o Codemagic para gerar builds do seu projeto iOS, siga este passo a passo:
-1. Preparação do Projeto
-
-Primeiro, certifique-se de que seu projeto está corretamente configurado:
-
-No Xcode:
-
-    Abra seu projeto clone.xcodeproj
-    Vá em Product → Scheme → Manage Schemes
-    Marque seu scheme como "Shared" (isso é crucial para CI/CD)
-    Commit e push essas mudanças
-
-2. Configuração no Codemagic
-Acesse o Codemagic:
-
-    Vá para codemagic.io
-    Faça login com GitHub/GitLab/Bitbucket
-    Conecte seu repositório
-
-Adicione seu projeto:
-
-    Clique em "Add application"
-    Selecione seu repositório
-    Escolha o branch principal (main/master)
-
-3. Configuração do codemagic.yaml
-
-Crie um arquivo codemagic.yaml na raiz do seu projeto:
-4. Configuração de Certificados e Profiles
-No Codemagic Dashboard:
-
-    Vá em "Teams" → "Integrations"
-    Adicione "App Store Connect API key":
-        Key ID (do App Store Connect)
-        Issuer ID (do App Store Connect)
-        Private Key (.p8 file)
-
-Certificados de Desenvolvimento:
-
-    Upload do certificado de distribuição (.p12)
-    Senha do certificado
-    Provisioning profiles
-
-5. Variáveis de Ambiente
-
-Configure no Codemagic (Teams → Environment variables):
-
-APP_STORE_CONNECT_ISSUER_ID=seu_issuer_id
-APP_STORE_CONNECT_KEY_IDENTIFIER=seu_key_id
-APP_STORE_CONNECT_PRIVATE_KEY=conteudo_do_arquivo_p8
-BUNDLE_IDENTIFIER=fabiano.oliveira@ticare.com.br
-
-6. Estrutura de Pastas Recomendada
-
-seu-projeto/
-├── clone.xcodeproj/
-├── clone/
-├── Podfile (se usar CocoaPods)
-├── codemagic.yaml
-└── README.md
-
-7. Dicas Importantes
-
-    Schemes Compartilhados: Sempre marque como "Shared"
-    Bundle ID: Deve corresponder ao configurado no App Store Connect
-    Certificados: Devem estar válidos e não expirados
-    Versioning: Configure corretamente no Info.plist
-
-8. Iniciando o Build
-
-    Commit e push o codemagic.yaml
-    No Codemagic, clique em "Start new build"
-    Selecione o workflow "ios-workflow"
-    Acompanhe os logs em tempo real
-
-Precisa de ajuda com alguma parte específica da configuração?
-
-nao tenho mac para rodar o xcode, consigo fazer isso pelo codemagic
-
-nao tenho um sistema ios para roda o xcode e configurar o app, consigo fazer isso pelo codemagic ?
-
-Sim! O Codemagic pode ajudar, mas há algumas limitações importantes. Vou explicar o que é possível fazer:
-O que o Codemagic PODE fazer sem macOS:
-1. Builds Básicos
-
-    Compilar código Swift/Objective-C
-    Resolver dependências (CocoaPods, SPM)
-    Gerar arquivos .ipa
-
-2. Configurações via codemagic.yaml
-
-    Definir bundle identifier
-    Configurar versioning
-    Ajustar build settings básicos
-
-O que você PRECISA fazer externamente:
-1. Certificados e Provisioning Profiles
-
-Você precisa de uma conta Apple Developer ($99/ano) e:
-
-    Opção A: Pedir para alguém com Mac gerar os certificados
-    Opção B: Usar ferramentas online como:
-        iOS App Signer (web-based)
-        Fastlane Match (pode ser configurado via CI)
-
-2. Configuração Inicial do Projeto
-
-Se o projeto não tem schemes compartilhados, você pode:
-Alternativas sem Mac:
-1. GitHub Codespaces + Fastlane
-
-yaml
-
-# .github/workflows/ios-setup.yml
-name: iOS Setup
-on: workflow_dispatch
-
-jobs:
-  setup:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup certificates
-        run: |
-          # Scripts para configurar certificados
-
-2. Bitrise (alternativa ao Codemagic)
-
-    Interface mais amigável para setup inicial
-    Templates pré-configurados
-
-3. Usar Expo/React Native
-
-Se for possível, considere:
-
-    Expo: Build na nuvem sem necessidade de Mac
-    React Native: Pode ser buildado no Codemagic mais facilmente
-
-Passos Recomendados:
-
-    Primeiro, rode o script de diagnóstico no Codemagic
-    Configure certificados via Apple Developer Portal (web)
-    Use Fastlane Match para gerenciar certificados automaticamente
-    Configure o build gradualmente
-
-Script de Diagnóstico Simples:
-
-Recomendação: Comece rodando o diagnóstico para entender a estrutura do seu projeto. Com base nos resultados, posso te ajudar a configurar o build adequadamente.
-
-Você quer que eu te ajude a configurar o diagnóstico primeiro?
-
-só preciso gerar um arquivo .ipa para testar meu app primeiro. consigo fazer isso no codemagic
-
-Sim! Você consegue gerar um arquivo .ipa no Codemagic mesmo sem Mac. Vou te mostrar uma configuração simples focada apenas na geração do .ipa:
-Como usar esta configuração:
-1. Crie o arquivo codemagic.yaml
-
-    Salve o conteúdo acima na raiz do seu projeto
-    Ajuste o BUNDLE_IDENTIFIER e seuemail@exemplo.com
-
-2. Commit e Push
-
-bash
-
-git add codemagic.yaml
-git commit -m "Add Codemagic configuration for IPA build"
-git push
-
-3. Configure no Codemagic
-
-    Vá para codemagic.io
-    Conecte seu repositório
-    Selecione o workflow "ios-ipa-build"
-    Inicie o build
-
-4. Características desta configuração
-
-✅ O que ela faz:
-
-    Detecta automaticamente seu projeto
-    Cria schemes se necessário
-    Gera arquivo .ipa sem assinatura (para teste)
-    Baixa o arquivo para você
-
-⚠️ Limitações:
-
-    IPA não será assinado (não funciona em dispositivos físicos)
-    Apenas para teste em simulador ou análise de estrutura
-    Não pode ser distribuído via TestFlight
-
-5. Para testar o IPA:
-
-Opção A: Simulador iOS (precisa de Mac)
-
-bash
-
-xcrun simctl install booted caminho/para/app.ipa
-
-Opção B: Análise da estrutura
-
-bash
-
-unzip -l app.ipa  # Ver conteúdo
-
-Opção C: Ferramentas online
-
-    Alguns serviços online permitem instalar IPAs não assinados
-
-Próximos passos se funcionar:
-
-Se o IPA for gerado com sucesso, posso te ajudar a:
-
-    Adicionar assinatura de código (para dispositivos físicos)
-    Configurar distribuição (TestFlight/App Store)
-    **Automatizar versionamento
-
-
 workflows:
   ios-ipa-build:
     name: Gerar IPA para Teste
@@ -344,8 +6,8 @@ workflows:
     environment:
       vars:
         # Ajuste estes valores conforme seu projeto
-        XCODE_PROJECT: "clone.xcodeproj"  # Nome do seu projeto
-        BUNDLE_IDENTIFIER: "com.exemplo.clone"  # Seu bundle ID
+        XCODE_PROJECT: "clone.xcodeproj" # Nome do seu projeto
+        BUNDLE_IDENTIFIER: "fabiano.oliveira@ticare.com.br" # Seu bundle ID
       xcode: latest
       cocoapods: default
     scripts:
@@ -355,12 +17,12 @@ workflows:
           ls -la
           echo -e "\nProjetos encontrados:"
           find . -name "*.xcodeproj" -type d
-          
+
       - name: Analisar targets e schemes disponíveis
         script: |
           echo "=== Analisando projeto ==="
           PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-          
+
           if [ -n "$PROJECT_FILE" ]; then
             echo "Projeto encontrado: $PROJECT_FILE"
             xcodebuild -list -project "$PROJECT_FILE"
@@ -368,7 +30,7 @@ workflows:
             echo "❌ Nenhum projeto .xcodeproj encontrado!"
             exit 1
           fi
-          
+
       - name: Instalar dependências (se houver CocoaPods)
         script: |
           if [ -f "Podfile" ]; then
@@ -377,49 +39,49 @@ workflows:
           else
             echo "✅ Nenhum Podfile encontrado, pulando CocoaPods"
           fi
-          
+
       - name: Criar scheme compartilhado automaticamente
         script: |
           PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-          
+
           # Pegar o primeiro target disponível
           FIRST_TARGET=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Targets:" | grep -v "Targets:" | grep -v "Build Configurations:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-          
+
           echo "🎯 Target principal: $FIRST_TARGET"
-          
+
           # Criar diretório para schemes compartilhados
           mkdir -p "$PROJECT_FILE/xcshareddata/xcschemes"
-          
+
           # Gerar scheme automaticamente
           SCHEME_NAME="$FIRST_TARGET"
           echo "📋 Criando scheme: $SCHEME_NAME"
-          
+
           # Fazer um build de teste para gerar o scheme
           xcodebuild -project "$PROJECT_FILE" -target "$FIRST_TARGET" -configuration Debug -showBuildSettings > /dev/null 2>&1 || true
-          
+
       - name: Configurar assinatura de código (desenvolvimento)
         script: |
           echo "🔑 Configurando assinatura para desenvolvimento..."
-          
+
           PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
           FIRST_TARGET=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Targets:" | grep -v "Targets:" | grep -v "Build Configurations:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-          
+
           # Configurar para desenvolvimento sem assinatura específica
           xcodebuild -project "$PROJECT_FILE" \
                      -target "$FIRST_TARGET" \
                      -configuration Release \
                      -showBuildSettings | grep PRODUCT_BUNDLE_IDENTIFIER || true
-                     
+
       - name: Build do arquivo IPA
         script: |
           echo "🚀 Iniciando build do IPA..."
-          
+
           PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
           FIRST_TARGET=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Targets:" | grep -v "Targets:" | grep -v "Build Configurations:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-          
+
           # Tentar build com scheme primeiro
           SCHEME_EXISTS=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Schemes:" | grep "$FIRST_TARGET" | head -n 1 | sed 's/^[[:space:]]*//')
-          
+
           if [ -n "$SCHEME_EXISTS" ]; then
             echo "✅ Usando scheme: $FIRST_TARGET"
             xcodebuild archive \
@@ -444,14 +106,14 @@ workflows:
               CODE_SIGNING_ALLOWED=NO \
               clean build
           fi
-          
+
       - name: Gerar arquivo IPA
         script: |
           echo "📱 Gerando arquivo IPA..."
-          
+
           # Procurar pelo arquivo .app gerado
           APP_FILE=$(find build -name "*.app" | head -n 1)
-          
+
           if [ -n "$APP_FILE" ]; then
             echo "✅ App encontrado: $APP_FILE"
             
@@ -470,7 +132,7 @@ workflows:
             find build -type f 2>/dev/null || echo "Diretório build não existe"
             exit 1
           fi
-          
+
       - name: Verificar IPA gerado
         script: |
           if [ -f "app.ipa" ]; then
@@ -484,17 +146,17 @@ workflows:
             echo "❌ Falha na geração do IPA"
             exit 1
           fi
-    
+
     artifacts:
       - app.ipa
       - build/**/*.app
       - build/**/*.xcarchive
       - /tmp/xcodebuild_logs/*.log
-    
+
     publishing:
       email:
         recipients:
-          - fabiano.oliveira@ticare.com.br  # Substitua pelo seu email
+          - fabiano.oliveira@ticare.com.br # Substitua pelo seu email
         notify:
           success: true
           failure: true
