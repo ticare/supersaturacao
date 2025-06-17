@@ -6,23 +6,60 @@ workflows:
     environment:
       vars:
         # Ajuste estes valores conforme seu projeto
-        XCODE_PROJECT: "clone.xcodeproj" # Nome do seu projeto
-        BUNDLE_IDENTIFIER: "fabiano.oliveira@ticare.com.br" # Seu bundle ID
+        XCODE_PROJECT: "clone.xcodeproj"  # Nome do seu projeto
+        BUNDLE_IDENTIFIER: "com.exemplo.clone"  # Seu bundle ID
       xcode: latest
       cocoapods: default
     scripts:
-      - name: Verificar estrutura do projeto
+      - name: Diagnóstico detalhado do projeto
         script: |
-          echo "=== Verificando projeto ==="
+          echo "🔍 DIAGNÓSTICO DETALHADO DO PROJETO"
+          echo "=================================="
+          
+          echo -e "\n1. 📁 Estrutura de arquivos:"
           ls -la
-          echo -e "\nProjetos encontrados:"
+          
+          echo -e "\n2. 📱 Projetos iOS encontrados:"
           find . -name "*.xcodeproj" -type d
-
+          find . -name "*.xcworkspace" -type d
+          
+          echo -e "\n3. 📋 Arquivos de configuração:"
+          find . -name "Podfile" -type f && echo "✅ Podfile encontrado" || echo "❌ Podfile não encontrado"
+          find . -name "*.podspec" -type f && echo "✅ Podspec encontrado" || echo "❌ Podspec não encontrado"
+          find . -name "Package.swift" -type f && echo "✅ Package.swift encontrado" || echo "❌ Package.swift não encontrado"
+          
+          PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
+          WORKSPACE_FILE=$(find . -name "*.xcworkspace" -type d | head -n 1)
+          
+          if [ -n "$WORKSPACE_FILE" ]; then
+            echo -e "\n4. 🏗️  Analisando workspace: $WORKSPACE_FILE"
+            xcodebuild -list -workspace "$WORKSPACE_FILE" || echo "❌ Erro ao listar workspace"
+          elif [ -n "$PROJECT_FILE" ]; then
+            echo -e "\n4. 🏗️  Analisando projeto: $PROJECT_FILE"
+            xcodebuild -list -project "$PROJECT_FILE" || echo "❌ Erro ao listar projeto"
+          else
+            echo -e "\n❌ Nenhum projeto iOS encontrado!"
+            exit 1
+          fi
+          
+          echo -e "\n5. 📋 Verificando Info.plist:"
+          find . -name "Info.plist" -type f | head -5
+          
+          echo -e "\n6. 🔍 Verificando schemes compartilhados:"
+          if [ -n "$PROJECT_FILE" ]; then
+            ls -la "$PROJECT_FILE/xcshareddata/xcschemes/" 2>/dev/null || echo "❌ Nenhum scheme compartilhado"
+          fi
+          if [ -n "$WORKSPACE_FILE" ]; then
+            ls -la "$WORKSPACE_FILE/xcshareddata/xcschemes/" 2>/dev/null || echo "❌ Nenhum scheme compartilhado no workspace"
+          fi
+          
+          echo -e "\n=================================="
+          
       - name: Analisar targets e schemes disponíveis
         script: |
           echo "=== Analisando projeto ==="
           PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-
+          
           if [ -n "$PROJECT_FILE" ]; then
             echo "Projeto encontrado: $PROJECT_FILE"
             xcodebuild -list -project "$PROJECT_FILE"
@@ -30,7 +67,7 @@ workflows:
             echo "❌ Nenhum projeto .xcodeproj encontrado!"
             exit 1
           fi
-
+          
       - name: Instalar dependências (se houver CocoaPods)
         script: |
           if [ -f "Podfile" ]; then
@@ -39,81 +76,202 @@ workflows:
           else
             echo "✅ Nenhum Podfile encontrado, pulando CocoaPods"
           fi
-
-      - name: Criar scheme compartilhado automaticamente
+          
+      - name: Resolver problemas comuns de build
         script: |
+          echo "🔧 Resolvendo problemas comuns..."
+          
           PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-
-          # Pegar o primeiro target disponível
-          FIRST_TARGET=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Targets:" | grep -v "Targets:" | grep -v "Build Configurations:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-
-          echo "🎯 Target principal: $FIRST_TARGET"
-
-          # Criar diretório para schemes compartilhados
-          mkdir -p "$PROJECT_FILE/xcshareddata/xcschemes"
-
-          # Gerar scheme automaticamente
-          SCHEME_NAME="$FIRST_TARGET"
-          echo "📋 Criando scheme: $SCHEME_NAME"
-
-          # Fazer um build de teste para gerar o scheme
-          xcodebuild -project "$PROJECT_FILE" -target "$FIRST_TARGET" -configuration Debug -showBuildSettings > /dev/null 2>&1 || true
-
+          WORKSPACE_FILE=$(find . -name "*.xcworkspace" -type d | head -n 1)
+          
+          # Limpar builds anteriores
+          echo "🧹 Limpando builds anteriores..."
+          rm -rf build/
+          rm -rf DerivedData/
+          
+          # Se for Flutter, configurar adequadamente
+          if [ -f "pubspec.yaml" ]; then
+            echo "🐦 Projeto Flutter detectado!"
+            echo "Configurando Flutter..."
+            
+            # Instalar dependências Flutter
+            flutter pub get
+            
+            # Configurar para iOS
+            cd ios
+            pod install --repo-update
+            cd ..
+            
+            # Build Flutter
+            flutter build ios --release --no-codesign
+            
+            echo "✅ Build Flutter concluído"
+          fi
+          
+          # Verificar e corrigir configurações comuns
+          if [ -n "$PROJECT_FILE" ] || [ -n "$WORKSPACE_FILE" ]; then
+            echo "🔧 Verificando configurações do projeto..."
+            
+            # Procurar por arquivos pbxproj
+            PBXPROJ_FILE=$(find . -name "project.pbxproj" | head -n 1)
+            
+            if [ -n "$PBXPROJ_FILE" ]; then
+              echo "📝 Verificando configurações no project.pbxproj..."
+              
+              # Verificar se há configurações problemáticas
+              grep -q "ENABLE_BITCODE" "$PBXPROJ_FILE" && echo "⚠️  ENABLE_BITCODE encontrado" || echo "✅ ENABLE_BITCODE OK"
+              grep -q "SWIFT_VERSION" "$PBXPROJ_FILE" && echo "✅ Swift version configurado" || echo "⚠️  Swift version não encontrado"
+            fi
+          fi
+          
       - name: Configurar assinatura de código (desenvolvimento)
         script: |
           echo "🔑 Configurando assinatura para desenvolvimento..."
-
+          
           PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
           FIRST_TARGET=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Targets:" | grep -v "Targets:" | grep -v "Build Configurations:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-
+          
           # Configurar para desenvolvimento sem assinatura específica
           xcodebuild -project "$PROJECT_FILE" \
                      -target "$FIRST_TARGET" \
                      -configuration Release \
                      -showBuildSettings | grep PRODUCT_BUNDLE_IDENTIFIER || true
-
+                     
       - name: Build do arquivo IPA
         script: |
           echo "🚀 Iniciando build do IPA..."
-
+          
           PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-          FIRST_TARGET=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Targets:" | grep -v "Targets:" | grep -v "Build Configurations:" | sed 's/^[[:space:]]*//' | grep -v '^$' | head -n 1)
-
-          # Tentar build com scheme primeiro
-          SCHEME_EXISTS=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Schemes:" | grep "$FIRST_TARGET" | head -n 1 | sed 's/^[[:space:]]*//')
-
-          if [ -n "$SCHEME_EXISTS" ]; then
-            echo "✅ Usando scheme: $FIRST_TARGET"
-            xcodebuild archive \
-              -project "$PROJECT_FILE" \
-              -scheme "$FIRST_TARGET" \
-              -configuration Release \
-              -archivePath "$PWD/build/$FIRST_TARGET.xcarchive" \
-              -sdk iphoneos \
-              CODE_SIGN_IDENTITY="" \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO
+          WORKSPACE_FILE=$(find . -name "*.xcworkspace" -type d | head -n 1)
+          
+          # Determinar se usar workspace ou project
+          if [ -n "$WORKSPACE_FILE" ]; then
+            echo "📦 Usando workspace: $WORKSPACE_FILE"
+            PROJECT_ARG="-workspace $WORKSPACE_FILE"
           else
-            echo "⚠️  Scheme não encontrado, usando target diretamente"
-            xcodebuild \
-              -project "$PROJECT_FILE" \
-              -target "$FIRST_TARGET" \
-              -configuration Release \
-              -sdk iphoneos \
-              CONFIGURATION_BUILD_DIR="$PWD/build" \
-              CODE_SIGN_IDENTITY="" \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO \
-              clean build
+            echo "📁 Usando project: $PROJECT_FILE"
+            PROJECT_ARG="-project $PROJECT_FILE"
           fi
-
+          
+          # Listar todos os schemes disponíveis
+          echo "📋 Schemes disponíveis:"
+          if [ -n "$WORKSPACE_FILE" ]; then
+            xcodebuild -list -workspace "$WORKSPACE_FILE"
+          else
+            xcodebuild -list -project "$PROJECT_FILE"
+          fi
+          
+          # Pegar o primeiro scheme disponível
+          if [ -n "$WORKSPACE_FILE" ]; then
+            FIRST_SCHEME=$(xcodebuild -list -workspace "$WORKSPACE_FILE" | grep -A 1000 "Schemes:" | grep -v "Schemes:" | sed 's/^[[:space:]]*//' | grep -v '^
+          
       - name: Gerar arquivo IPA
         script: |
           echo "📱 Gerando arquivo IPA..."
-
+          
+          # Procurar pelo arquivo .app em vários locais possíveis
+          APP_FILE=""
+          
+          # Locais possíveis do arquivo .app
+          SEARCH_PATHS=(
+            "build"
+            "build/Release-iphoneos"
+            "build/*.xcarchive/Products/Applications"
+            "$HOME/Library/Developer/Xcode/DerivedData/*/Build/Products/Release-iphoneos"
+            "."
+          )
+          
+          for path in "${SEARCH_PATHS[@]}"; do
+            echo "🔍 Procurando em: $path"
+            FOUND_APP=$(find $path -name "*.app" -type d 2>/dev/null | head -n 1)
+            if [ -n "$FOUND_APP" ]; then
+              APP_FILE="$FOUND_APP"
+              echo "✅ App encontrado: $APP_FILE"
+              break
+            fi
+          done
+          
+          if [ -z "$APP_FILE" ]; then
+            echo "❌ Arquivo .app não encontrado!"
+            echo "📁 Estrutura de diretórios:"
+            find . -name "*.app" -type d 2>/dev/null || echo "Nenhum arquivo .app encontrado em lugar algum"
+            
+            echo -e "\n📁 Conteúdo do diretório build:"
+            ls -la build/ 2>/dev/null || echo "Diretório build não existe"
+            
+            echo -e "\n📁 Todos os arquivos gerados:"
+            find . -type f -name "*" | grep -E '\.(app|ipa|xcarchive)' || echo "Nenhum arquivo relevante encontrado"
+            
+            exit 1
+          fi
+          
+          # Verificar se o .app é válido
+          if [ ! -d "$APP_FILE" ]; then
+            echo "❌ $APP_FILE não é um diretório válido"
+            exit 1
+          fi
+          
+          echo "📋 Conteúdo do app:"
+          ls -la "$APP_FILE"
+          
+          # Criar estrutura para IPA
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R "$APP_FILE" Payload/
+          
+          # Verificar se copiou corretamente
+          echo "📋 Conteúdo do Payload:"
+          ls -la Payload/
+          
+          # Criar arquivo IPA
+          echo "🗜️  Criando arquivo ZIP/IPA..."
+          zip -r app.ipa Payload/
+          
+          if [ -f "app.ipa" ]; then
+            echo "🎉 IPA gerado com sucesso!"
+            ls -la app.ipa
+          else
+            echo "❌ Falha ao criar arquivo IPA"
+            exit 1
+          fi
+          
+      - name: Verificar IPA gerado
+        script: |
+          if [ -f "app.ipa" ]; then
+            echo "✅ Arquivo IPA criado com sucesso!"
+            echo "📊 Tamanho do arquivo:"
+            ls -lh app.ipa
+            
+            echo -e "\n📋 Conteúdo do IPA:"
+            unzip -l app.ipa | head -20
+          else
+            echo "❌ Falha na geração do IPA"
+            exit 1
+          fi
+    
+    artifacts:
+      - app.ipa
+      - build/**/*.app
+      - build/**/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+    
+    publishing:
+      email:
+        recipients:
+          - seuemail@exemplo.com  # Substitua pelo seu email
+        notify:
+          success: true
+          failure: true | head -n 1)
+          else
+            FIRST_SCHEME=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1000 "Schemes:" | grep -v "Schemes:" | sed 's/^[[:space:]]*//' | grep -v '^
+          
+      - name: Gerar arquivo IPA
+        script: |
+          echo "📱 Gerando arquivo IPA..."
+          
           # Procurar pelo arquivo .app gerado
           APP_FILE=$(find build -name "*.app" | head -n 1)
-
+          
           if [ -n "$APP_FILE" ]; then
             echo "✅ App encontrado: $APP_FILE"
             
@@ -132,7 +290,7 @@ workflows:
             find build -type f 2>/dev/null || echo "Diretório build não existe"
             exit 1
           fi
-
+          
       - name: Verificar IPA gerado
         script: |
           if [ -f "app.ipa" ]; then
@@ -146,17 +304,120 @@ workflows:
             echo "❌ Falha na geração do IPA"
             exit 1
           fi
-
+    
     artifacts:
       - app.ipa
       - build/**/*.app
       - build/**/*.xcarchive
       - /tmp/xcodebuild_logs/*.log
-
+    
     publishing:
       email:
         recipients:
-          - fabiano.oliveira@ticare.com.br # Substitua pelo seu email
+          - seuemail@exemplo.com  # Substitua pelo seu email
+        notify:
+          success: true
+          failure: true | head -n 1)
+          fi
+          
+          echo "🎯 Scheme selecionado: $FIRST_SCHEME"
+          
+          # Build mais simples primeiro (sem archive)
+          echo "🔨 Fazendo build simples primeiro..."
+          xcodebuild \
+            $PROJECT_ARG \
+            -scheme "$FIRST_SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE="" \
+            clean build
+          
+          # Se o build simples funcionou, tentar o archive
+          if [ $? -eq 0 ]; then
+            echo "✅ Build simples OK, tentando archive..."
+            xcodebuild archive \
+              $PROJECT_ARG \
+              -scheme "$FIRST_SCHEME" \
+              -configuration Release \
+              -archivePath "$PWD/build/$FIRST_SCHEME.xcarchive" \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              ONLY_ACTIVE_ARCH=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGN_IDENTITY="" \
+              PROVISIONING_PROFILE=""
+          else
+            echo "❌ Build simples falhou, tentando sem clean..."
+            xcodebuild \
+              $PROJECT_ARG \
+              -scheme "$FIRST_SCHEME" \
+              -configuration Release \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              ONLY_ACTIVE_ARCH=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGN_IDENTITY="" \
+              PROVISIONING_PROFILE="" \
+              build
+          fi
+          
+      - name: Gerar arquivo IPA
+        script: |
+          echo "📱 Gerando arquivo IPA..."
+          
+          # Procurar pelo arquivo .app gerado
+          APP_FILE=$(find build -name "*.app" | head -n 1)
+          
+          if [ -n "$APP_FILE" ]; then
+            echo "✅ App encontrado: $APP_FILE"
+            
+            # Criar estrutura para IPA
+            mkdir -p Payload
+            cp -R "$APP_FILE" Payload/
+            
+            # Criar arquivo IPA
+            zip -r app.ipa Payload/
+            
+            echo "🎉 IPA gerado com sucesso: app.ipa"
+            ls -la app.ipa
+          else
+            echo "❌ Arquivo .app não encontrado!"
+            echo "Arquivos disponíveis em build/:"
+            find build -type f 2>/dev/null || echo "Diretório build não existe"
+            exit 1
+          fi
+          
+      - name: Verificar IPA gerado
+        script: |
+          if [ -f "app.ipa" ]; then
+            echo "✅ Arquivo IPA criado com sucesso!"
+            echo "📊 Tamanho do arquivo:"
+            ls -lh app.ipa
+            
+            echo -e "\n📋 Conteúdo do IPA:"
+            unzip -l app.ipa | head -20
+          else
+            echo "❌ Falha na geração do IPA"
+            exit 1
+          fi
+    
+    artifacts:
+      - app.ipa
+      - build/**/*.app
+      - build/**/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+    
+    publishing:
+      email:
+        recipients:
+          - seuemail@exemplo.com  # Substitua pelo seu email
         notify:
           success: true
           failure: true
